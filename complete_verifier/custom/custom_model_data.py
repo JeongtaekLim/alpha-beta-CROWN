@@ -145,7 +145,7 @@ def simple_cifar10(spec):
     return X, labels, data_max, data_min, ret_eps
 
 # Define the CNN model
-def fashion_mnist_cnn():
+def fashion_mnist_model():
     model = nn.Sequential(
         nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),  # 입력 채널=1, 출력 채널=32
         nn.ReLU(),
@@ -159,11 +159,11 @@ def fashion_mnist_cnn():
         nn.Linear(128, 10)  # Output Layer (10 Classes)
     )
     return model
-def fashion_mnist(spec):
+def fashion_mnist_data(spec):
     """Example dataloader. For MNIST and CIFAR you can actually use existing ones in utils.py."""
     eps = spec["epsilon"]
     assert eps is not None
-    database_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'datasets')
+    database_path = '/content/fashion_mnist/dataset'
     # You can access the mean and std stored in config file.
     mean = torch.tensor(arguments.Config["data"]["mean"])
     std = torch.tensor(arguments.Config["data"]["std"])
