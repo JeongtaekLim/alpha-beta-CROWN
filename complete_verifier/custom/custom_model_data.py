@@ -35,7 +35,7 @@ def simple_conv_model(in_channel, out_dim):
         nn.Conv2d(16, 32, 4, stride=2, padding=0),
         nn.ReLU(),
         nn.Flatten(),
-        nn.Linear(32*6*6,100),
+        nn.Linear(32 * 6 * 6, 100),
         nn.ReLU(),
         nn.Linear(100, out_dim)
     )
@@ -73,8 +73,10 @@ def simple_box_data(spec):
 def box_data(dim, low=0., high=1., segments=10, num_classes=10, eps=None):
     """Generate fake datapoints."""
     step = (high - low) / segments
-    data_min = torch.linspace(low, high - step, segments).unsqueeze(1).expand(segments, dim)  # Per element lower bounds.
-    data_max = torch.linspace(low + step, high, segments).unsqueeze(1).expand(segments, dim)  # Per element upper bounds.
+    data_min = torch.linspace(low, high - step, segments).unsqueeze(1).expand(segments,
+                                                                              dim)  # Per element lower bounds.
+    data_max = torch.linspace(low + step, high, segments).unsqueeze(1).expand(segments,
+                                                                              dim)  # Per element upper bounds.
     X = (data_min + data_max) / 2.  # Fake data.
     labels = torch.remainder(torch.arange(0, segments, dtype=torch.int64), num_classes)  # Fake label.
     eps = None  # Lp norm perturbation epsilon. Not used, since we will return per-element min and max.
@@ -90,7 +92,8 @@ def cifar10(spec, use_bounds=False):
     mean = torch.tensor(arguments.Config["data"]["mean"])
     std = torch.tensor(arguments.Config["data"]["std"])
     normalize = transforms.Normalize(mean=mean, std=std)
-    test_data = datasets.CIFAR10(database_path, train=False, download=True, transform=transforms.Compose([transforms.ToTensor(), normalize]))
+    test_data = datasets.CIFAR10(database_path, train=False, download=True,
+                                 transform=transforms.Compose([transforms.ToTensor(), normalize]))
     # Load entire dataset.
     testloader = torch.utils.data.DataLoader(test_data, batch_size=10000, shuffle=False, num_workers=4)
     X, labels = next(iter(testloader))
@@ -126,11 +129,50 @@ def simple_cifar10(spec):
     mean = torch.tensor(arguments.Config["data"]["mean"])
     std = torch.tensor(arguments.Config["data"]["std"])
     normalize = transforms.Normalize(mean=mean, std=std)
-    test_data = datasets.CIFAR10(database_path, train=False, download=True,\
-            transform=transforms.Compose([transforms.ToTensor(), normalize]))
+    test_data = datasets.CIFAR10(database_path, train=False, download=True, \
+                                 transform=transforms.Compose([transforms.ToTensor(), normalize]))
     # Load entire dataset.
-    testloader = torch.utils.data.DataLoader(test_data,\
-            batch_size=10000, shuffle=False, num_workers=4)
+    testloader = torch.utils.data.DataLoader(test_data, \
+                                             batch_size=10000, shuffle=False, num_workers=4)
+    X, labels = next(iter(testloader))
+    # Set data_max and data_min to be None if no clip. For CIFAR-10 we clip to [0,1].
+    data_max = torch.reshape((1. - mean) / std, (1, -1, 1, 1))
+    data_min = torch.reshape((0. - mean) / std, (1, -1, 1, 1))
+    if eps is None:
+        raise ValueError('You must specify an epsilon')
+    # Rescale epsilon.
+    ret_eps = torch.reshape(eps / std, (1, -1, 1, 1))
+    return X, labels, data_max, data_min, ret_eps
+
+# Define the CNN model
+def fashion_mnist_cnn():
+    model = nn.Sequential(
+        nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),  # 입력 채널=1, 출력 채널=32
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPooling으로 크기 절반 감소 (28x28 -> 14x14)
+        nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),  # 입력 채널=32, 출력 채널=64
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPooling으로 크기 절반 감소 (14x14 -> 7x7)
+        nn.Flatten(),  # 7x7x64를 1차원으로 평탄화 (크기: 3136)
+        nn.Linear(7 * 7 * 64, 128),  # Fully Connected Layer 1
+        nn.ReLU(),
+        nn.Linear(128, 10)  # Output Layer (10 Classes)
+    )
+    return model
+def fashion_mnist(spec):
+    """Example dataloader. For MNIST and CIFAR you can actually use existing ones in utils.py."""
+    eps = spec["epsilon"]
+    assert eps is not None
+    database_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'datasets')
+    # You can access the mean and std stored in config file.
+    mean = torch.tensor(arguments.Config["data"]["mean"])
+    std = torch.tensor(arguments.Config["data"]["std"])
+    normalize = transforms.Normalize(mean=mean, std=std)
+    test_data = datasets.FashionMNIST(database_path, train=False, download=True, \
+                                      transform=transforms.Compose([transforms.ToTensor(), normalize]))
+    # Load entire dataset.
+    testloader = torch.utils.data.DataLoader(test_data, \
+                                             batch_size=10000, shuffle=False, num_workers=4)
     X, labels = next(iter(testloader))
     # Set data_max and data_min to be None if no clip. For CIFAR-10 we clip to [0,1].
     data_max = torch.reshape((1. - mean) / std, (1, -1, 1, 1))
