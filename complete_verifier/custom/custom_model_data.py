@@ -144,21 +144,21 @@ def simple_cifar10(spec):
     ret_eps = torch.reshape(eps / std, (1, -1, 1, 1))
     return X, labels, data_max, data_min, ret_eps
 
-# Define the CNN model
+
 def fashion_mnist_model():
     model = nn.Sequential(
-        nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),  # 입력 채널=1, 출력 채널=32
+        nn.Flatten(),  # 28x28 이미지를 1차원 벡터로 변환 (크기: 784)
+        nn.Linear(28 * 28, 512),  # 첫 번째 Fully Connected Layer
         nn.ReLU(),
-        nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPooling으로 크기 절반 감소 (28x28 -> 14x14)
-        nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),  # 입력 채널=32, 출력 채널=64
+        nn.Linear(512, 256),  # 두 번째 Fully Connected Layer
         nn.ReLU(),
-        nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPooling으로 크기 절반 감소 (14x14 -> 7x7)
-        nn.Flatten(),  # 7x7x64를 1차원으로 평탄화 (크기: 3136)
-        nn.Linear(7 * 7 * 64, 128),  # Fully Connected Layer 1
+        nn.Linear(256, 128),  # 세 번째 Fully Connected Layer
         nn.ReLU(),
         nn.Linear(128, 10)  # Output Layer (10 Classes)
     )
     return model
+
+
 def fashion_mnist_data(spec):
     """Example dataloader. For MNIST and CIFAR you can actually use existing ones in utils.py."""
     eps = spec["epsilon"]
@@ -171,8 +171,7 @@ def fashion_mnist_data(spec):
     test_data = datasets.FashionMNIST(database_path, train=False, download=True, \
                                       transform=transforms.Compose([transforms.ToTensor(), normalize]))
     # Load entire dataset.
-    testloader = torch.utils.data.DataLoader(test_data, \
-                                             batch_size=10000, shuffle=False, num_workers=4)
+    testloader = torch.utils.data.DataLoader(test_data, batch_size=10000, shuffle=False, num_workers=4)
     X, labels = next(iter(testloader))
     # Set data_max and data_min to be None if no clip. For CIFAR-10 we clip to [0,1].
     data_max = torch.reshape((1. - mean) / std, (1, -1, 1, 1))
